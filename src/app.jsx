@@ -215,7 +215,7 @@ export function App() {
       
       <div className="bg-white px-6 py-5 shadow-sm flex items-center justify-between sticky top-0 z-20">
         <h2 className="text-xl font-bold text-gray-800 capitalize">
-          {view === 'perfil' ? 'Carnet Digital' : view === 'reservas' ? 'Agendar Reserva' : view === 'mis_reservas' ? 'Historial' : 'Finanzas'}
+          {view === 'perfil' ? 'Carnet Digital' : view === 'reservas' ? 'Agendar Reserva' : view === 'mis_reservas' ? 'Mis Reservas' : 'Finanzas'}
         </h2>
         <div className="w-10 h-10 bg-ccvGreen text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md">
           {user?.nombres.charAt(0)}
@@ -305,7 +305,7 @@ export function App() {
         {/* --- NUEVA VISTA: MIS RESERVAS (HISTORIAL) --- */}
         {view === 'mis_reservas' && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-            <h3 className="text-gray-800 font-bold text-xl mb-4 px-1">Próximos Turnos</h3>
+            <h3 className="text-gray-800 font-bold text-xl mb-4 px-1">Mis reservas</h3>
             <div className="space-y-4">
               {misReservas.length === 0 ? (
                 <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
@@ -470,7 +470,7 @@ export function App() {
         {/* NUEVO BOTÓN */}
         <button onClick={() => setView('mis_reservas')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'mis_reservas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
           <div className={`${view === 'mis_reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><List className="w-5 h-5" /></div>
-          <span className="text-[9px] font-bold">Historial</span>
+          <span className="text-[9px] font-bold">Mis Reservas</span>
         </button>
         <button onClick={() => {setUser(null); setView('login')}} className="flex flex-col items-center gap-1 w-14 text-gray-400 hover:text-red-500 transition-colors">
           <div className="p-1.5"><LogOut className="w-5 h-5" /></div>
