@@ -120,6 +120,10 @@ export function App() {
   const [resetUser, setResetUser] = useState('')
   const [newPass, setNewPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
+  // Nuevos estados para Reservas
+  const [reservaSede, setReservaSede] = useState('1') // 1: Villa, 2: Chosica, 3: Sur
+  const [reservaFecha, setReservaFecha] = useState('2026-02-28')
+  const [reservaHora, setReservaHora] = useState('10:00 AM')
 
   // --- VISTA: RECUPERAR CONTRASEÑA (FUNCIONAL) ---
   if (view === 'recuperar') {
@@ -300,25 +304,26 @@ export function App() {
           </div>
         )}
 
-        {/* === SUB-VISTA: RESERVAS === */}
+        {/* === SUB-VISTA: RESERVAS (FUNCIONAL) === */}
         {view === 'reservas' && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-6">
             <div>
               <h3 className="text-gray-500 text-sm font-bold flex items-center gap-2 mb-2"><MapPin className="w-4 h-4"/> Seleccionar Sede</h3>
-              <select className="w-full bg-white border border-gray-200 rounded-xl py-4 px-4 outline-none focus:border-ccvGreen focus:ring-1 focus:ring-ccvGreen text-gray-700 font-bold shadow-sm appearance-none cursor-pointer">
-                <option>Sede Villa</option>
-                <option>Sede Chosica</option>
-                <option>Sede Sur</option>
+              <select 
+                className="w-full bg-white border border-gray-200 rounded-xl py-4 px-4 outline-none focus:border-ccvGreen focus:ring-1 focus:ring-ccvGreen text-gray-700 font-bold shadow-sm appearance-none cursor-pointer"
+                value={reservaSede}
+                onChange={(e) => setReservaSede(e.target.value)}
+              >
+                <option value="1">Sede Villa</option>
+                <option value="2">Sede Chosica</option>
+                <option value="3">Sede Sur</option>
               </select>
             </div>
 
+            {/* Calendario Simulado (Mantenemos tu diseño de Figma) */}
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-5">
                 <span className="font-bold text-gray-800 text-lg">Febrero 2026</span>
-                <div className="flex gap-2">
-                  <button className="text-gray-400 hover:text-gray-800 p-1 font-bold">&lt;</button>
-                  <button className="text-gray-400 hover:text-gray-800 p-1 font-bold">&gt;</button>
-                </div>
               </div>
               <div className="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 font-bold mb-3">
                 <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
@@ -328,23 +333,57 @@ export function App() {
                 <div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div>
                 <div>9</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div>15</div>
                 <div>16</div><div>17</div><div>18</div><div>19</div><div>20</div><div>21</div>
-                <div className="bg-gray-900 text-white rounded-xl w-9 h-9 flex items-center justify-center mx-auto shadow-md">22</div>
-                <div>23</div><div>24</div><div>25</div><div>26</div><div>27</div><div>28</div>
+                <div>22</div><div>23</div><div>24</div><div>25</div><div>26</div><div>27</div>
+                <div className="bg-gray-900 text-white rounded-xl w-9 h-9 flex items-center justify-center mx-auto shadow-md">28</div>
               </div>
             </div>
 
             <div>
               <h3 className="text-gray-500 text-sm font-bold flex items-center gap-2 mb-3"><Clock className="w-4 h-4"/> Horario</h3>
               <div className="grid grid-cols-2 gap-3">
-                <button className="border border-gray-200 bg-white py-3.5 rounded-xl font-bold text-gray-500 hover:border-ccvGreen hover:text-ccvGreen hover:bg-green-50 transition-all shadow-sm">10:00 AM</button>
-                <button className="border border-gray-200 bg-white py-3.5 rounded-xl font-bold text-gray-500 hover:border-ccvGreen hover:text-ccvGreen hover:bg-green-50 transition-all shadow-sm">12:00 PM</button>
-                <button className="border-ccvGreen bg-green-50 py-3.5 rounded-xl font-bold text-ccvGreen transition-all shadow-sm ring-1 ring-ccvGreen">02:00 PM</button>
-                <button className="border border-gray-200 bg-white py-3.5 rounded-xl font-bold text-gray-500 hover:border-ccvGreen hover:text-ccvGreen hover:bg-green-50 transition-all shadow-sm">04:00 PM</button>
+                {['10:00 AM', '12:00 PM', '02:00 PM', '04:00 PM'].map((hora) => (
+                  <button 
+                    key={hora}
+                    onClick={() => setReservaHora(hora)}
+                    className={`py-3.5 rounded-xl font-bold transition-all shadow-sm ${reservaHora === hora ? 'bg-green-50 text-ccvGreen border-ccvGreen ring-1 ring-ccvGreen' : 'border border-gray-200 bg-white text-gray-500 hover:border-ccvGreen hover:text-ccvGreen hover:bg-green-50'}`}
+                  >
+                    {hora}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <button className="w-full bg-ccvGreen text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-800 transition-colors mt-2 text-lg">
-              Confirmar Reserva
+            <button 
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true)
+                try {
+                  const response = await fetch(`${API_URL}/reservas/registrarReserva`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      idSocio: user.id_socio,
+                      idInstalacion: parseInt(reservaSede),
+                      fecha: reservaFecha,
+                      horaInicio: reservaHora,
+                      horaFin: "N/A" // Dato de relleno para cumplir con tu DTO
+                    })
+                  })
+                  const data = await response.json()
+                  if (response.ok) {
+                    alert(`${data.mensaje}\nCódigo de tu reserva: ${data.codigoReserva}`)
+                    setView('perfil') // Lo mandamos al perfil tras reservar
+                  } else {
+                    alert(`Error: ${data.detail}`)
+                  }
+                } catch (err) {
+                  alert("Error de conexión con el servidor al reservar.")
+                }
+                setLoading(false)
+              }}
+              className="w-full bg-ccvGreen text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-800 transition-colors mt-2 text-lg"
+            >
+              {loading ? "Procesando..." : "Confirmar Reserva"}
             </button>
           </div>
         )}
