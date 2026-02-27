@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { User, CreditCard, Calendar, LogOut, Lock, IdCard, AlertTriangle, QrCode, MapPin, Clock, List } from 'lucide-react'
+import { User, CreditCard, Calendar, LogOut, Lock, IdCard, AlertTriangle, QrCode, MapPin, Clock, List, X, ShieldCheck, CheckCircle2 } from 'lucide-react'
 
 const API_URL = "https://ccv-api.onrender.com" 
 
 export function App() {
-  // 1. TODAS LAS VARIABLES DE ESTADO
   const [view, setView] = useState('login')
   const [user, setUser] = useState(null)
   const [finanzas, setFinanzas] = useState(null)
-  const [misReservas, setMisReservas] = useState([]) // <--- Nueva memoria para el historial
+  const [misReservas, setMisReservas] = useState([]) 
   
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -24,7 +23,11 @@ export function App() {
   const [calendarDate, setCalendarDate] = useState(new Date(2026, 1, 1)) 
   const [reservaFecha, setReservaFecha] = useState('2026-02-28')
 
-  // 2. FUNCIONES
+  // --- NUEVOS ESTADOS PARA LA PASARELA ---
+  const [showPagoModal, setShowPagoModal] = useState(false)
+  const [tarjeta, setTarjeta] = useState('4242 4242 4242 4242') // Tarjeta de prueba por defecto
+  const [procesandoPago, setProcesandoPago] = useState(false)
+
   const formatFecha = (year, month, day) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
@@ -53,7 +56,7 @@ export function App() {
       if (response.ok) {
         setUser(data.datosSocio)
         cargarFinanzas(data.datosSocio.id_socio)
-        cargarMisReservas(data.datosSocio.id_socio) // Cargamos el historial al entrar
+        cargarMisReservas(data.datosSocio.id_socio) 
         setView('finanzas')
       } else {
         setError(data.detail || "Credenciales incorrectas")
@@ -96,7 +99,40 @@ export function App() {
     setLoading(false)
   }
 
-  // 3. VISTAS
+  // --- FUNCIÓN DE LA PASARELA SIMULADA ---
+  const handlePagarDeuda = async (e) => {
+    e.preventDefault()
+    if (tarjeta.length < 15) return alert("Ingresa un número de tarjeta válido.")
+    
+    setProcesandoPago(true)
+    
+    // Simulamos que el banco está procesando por 1.5 segundos
+    setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_URL}/finanzas/registrarPago`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idSocio: user.id_socio,
+            numeroTarjeta: tarjeta
+          })
+        })
+        const data = await response.json()
+        
+        if (response.ok) {
+          alert(`✅ ${data.mensaje}\nTransacción: ${data.codigoTransaccion}\nTarjeta: ${data.tarjetaUsada}`)
+          setShowPagoModal(false)
+          cargarFinanzas(user.id_socio) // Esto actualizará la pantalla a S/ 0.00
+        } else {
+          alert(`Error: ${data.detail}`)
+        }
+      } catch (err) {
+        alert("Error conectando con la pasarela de pagos.")
+      }
+      setProcesandoPago(false)
+    }, 1500)
+  }
+
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -211,7 +247,7 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 font-sans">
+    <div className="min-h-screen bg-gray-50 pb-24 font-sans relative">
       
       <div className="bg-white px-6 py-5 shadow-sm flex items-center justify-between sticky top-0 z-20">
         <h2 className="text-xl font-bold text-gray-800 capitalize">
@@ -227,22 +263,32 @@ export function App() {
         {view === 'finanzas' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-full -mr-10 -mt-10"></div>
+              <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -mr-10 -mt-10 ${finanzas?.deuda_total > 0 ? 'bg-red-50' : 'bg-green-50'}`}></div>
               <div className="flex justify-between items-start relative z-10">
                 <p className="text-gray-500 text-sm font-semibold">Deuda Total Consolidada</p>
-                <span className="bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-red-100">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Pendiente
-                </span>
+                {finanzas?.deuda_total > 0 ? (
+                  <span className="bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-red-100">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Pendiente
+                  </span>
+                ) : (
+                  <span className="bg-green-50 text-green-600 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-green-100">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Al día
+                  </span>
+                )}
               </div>
               <div className="mt-3 mb-6 relative z-10">
                 <span className="text-gray-400 text-2xl font-medium">S/ </span>
                 <span className="text-5xl font-extrabold text-gray-900 tracking-tight">
                   {finanzas ? finanzas.deuda_total.toFixed(2) : "0.00"}
                 </span>
-                <p className="text-sm text-gray-400 mt-2 font-medium">Próximo vencimiento: 28 de Febrero</p>
+                {finanzas?.deuda_total > 0 && <p className="text-sm text-gray-400 mt-2 font-medium">Próximo vencimiento: 28 de Febrero</p>}
               </div>
-              <button className="w-full bg-ccvGreen text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-green-800 transition-colors relative z-10 text-lg">
-                Pagar ahora
+              
+              <button 
+                onClick={() => finanzas?.deuda_total > 0 ? setShowPagoModal(true) : alert("No tienes deudas pendientes.")}
+                className={`w-full text-white font-bold py-3.5 rounded-xl shadow-md transition-colors relative z-10 text-lg ${finanzas?.deuda_total > 0 ? 'bg-ccvGreen hover:bg-green-800' : 'bg-gray-300 cursor-not-allowed'}`}
+              >
+                {finanzas?.deuda_total > 0 ? "Pagar ahora" : "Nada que pagar"}
               </button>
             </div>
 
@@ -302,7 +348,6 @@ export function App() {
           </div>
         )}
 
-        {/* --- NUEVA VISTA: MIS RESERVAS (HISTORIAL) --- */}
         {view === 'mis_reservas' && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
             <h3 className="text-gray-800 font-bold text-xl mb-4 px-1">Mis reservas</h3>
@@ -434,8 +479,8 @@ export function App() {
                   const data = await response.json()
                   if (response.ok) {
                     alert(`${data.mensaje}\nCódigo de tu reserva: ${data.codigoReserva}`)
-                    cargarMisReservas(user.id_socio) // Actualiza la lista
-                    setView('mis_reservas') // Lo manda directo a ver su historial
+                    cargarMisReservas(user.id_socio) 
+                    setView('mis_reservas') 
                   } else {
                     alert(`Error: ${data.detail}`)
                   }
@@ -453,6 +498,72 @@ export function App() {
 
       </div>
 
+      {/* --- EL MODAL (VENTANA FLOTANTE) DE LA PASARELA DE PAGOS --- */}
+      {showPagoModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-gray-900 p-4 flex justify-between items-center text-white">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-green-400" />
+                <span className="font-bold text-sm tracking-wide">Pago Seguro CCV</span>
+              </div>
+              <button onClick={() => setShowPagoModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Total a pagar</p>
+                <p className="text-4xl font-extrabold text-gray-900">S/ {finanzas?.deuda_total.toFixed(2)}</p>
+              </div>
+
+              <form onSubmit={handlePagarDeuda} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase px-1">Número de Tarjeta (Prueba)</label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
+                    <input 
+                      type="text" required
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-3 outline-none focus:border-ccvGreen text-gray-700 font-medium tracking-widest text-sm"
+                      value={tarjeta} onChange={(e) => setTarjeta(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase px-1">Vencimiento</label>
+                    <input type="text" placeholder="MM/YY" defaultValue="12/30" required className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 outline-none focus:border-ccvGreen text-gray-700 font-medium text-center" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase px-1">CVV</label>
+                    <input type="password" placeholder="•••" defaultValue="123" required className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 outline-none focus:border-ccvGreen text-gray-700 font-medium text-center tracking-widest" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 mb-1 block uppercase px-1">Titular de la Tarjeta</label>
+                  <input type="text" defaultValue={user?.nombres} required className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 outline-none focus:border-ccvGreen text-gray-700 font-medium" />
+                </div>
+
+                <button 
+                  type="submit" disabled={procesandoPago}
+                  className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-black transition-colors mt-4 text-lg flex justify-center items-center gap-2"
+                >
+                  {procesandoPago ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Procesando con el banco...
+                    </>
+                  ) : "Procesar Pago"}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 5 BOTONES EN LA BARRA INFERIOR */}
       <div className="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-3 px-1 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button onClick={() => setView('perfil')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'perfil' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -467,7 +578,6 @@ export function App() {
           <div className={`${view === 'reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><Calendar className="w-5 h-5" /></div>
           <span className="text-[9px] font-bold">Agendar</span>
         </button>
-        {/* NUEVO BOTÓN */}
         <button onClick={() => setView('mis_reservas')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'mis_reservas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
           <div className={`${view === 'mis_reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><List className="w-5 h-5" /></div>
           <span className="text-[9px] font-bold">Mis Reservas</span>
