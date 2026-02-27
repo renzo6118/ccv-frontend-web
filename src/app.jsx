@@ -51,7 +51,7 @@ export function App() {
     }
   }
 
-  // --- VISTA: LOGIN ---
+  // --- VISTA 1: LOGIN ---
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -99,10 +99,106 @@ export function App() {
             </button>
           </form>
           
+          {/* NUEVO PIE DE LOGIN (Sin botón de registro y con nota administrativa) */}
           <div className="mt-8 text-center">
-            <p className="text-sm text-ccvGreen font-bold cursor-pointer hover:underline">¿No tienes cuenta? Crear nueva cuenta</p>
-            <p className="text-xs text-gray-400 mt-3 cursor-pointer hover:text-gray-600">¿Olvidaste tu contraseña?</p>
+            <p 
+              onClick={() => setView('recuperar')} 
+              className="text-sm text-ccvGreen font-bold cursor-pointer hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </p>
+            <p className="text-xs text-gray-400 mt-4 px-4 leading-relaxed font-medium">
+              Las credenciales de acceso son generadas exclusivamente por el área de Administración del club.
+            </p>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+// Nuevos estados para la recuperación (Ponlos arriba con los otros useState)
+  const [resetUser, setResetUser] = useState('')
+  const [newPass, setNewPass] = useState('')
+  const [confirmPass, setConfirmPass] = useState('')
+
+  // --- VISTA: RECUPERAR CONTRASEÑA (FUNCIONAL) ---
+  if (view === 'recuperar') {
+    const handleReset = async (e) => {
+      e.preventDefault()
+      if (newPass !== confirmPass) return alert("¡Las contraseñas no coinciden!")
+      
+      setLoading(true)
+      try {
+        const response = await fetch(`${API_URL}/autenticacion/actualizarPassword`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: resetUser, nuevaPassword: newPass })
+        })
+        
+        if (response.ok) {
+          alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.')
+          setView('login')
+        } else {
+          alert('Error: No se encontró al socio.')
+        }
+      } catch (err) {
+        alert('Error de conexión con el servidor')
+      }
+      setLoading(false)
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-gray-100 animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-16 h-16 bg-green-50 text-ccvGreen rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Nueva Contraseña</h2>
+          
+          <form onSubmit={handleReset} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Usuario o DNI</label>
+              <div className="relative">
+                <IdCard className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
+                <input type="text" placeholder="rminaya" required 
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-ccvGreen text-gray-700 font-medium"
+                  value={resetUser} onChange={(e) => setResetUser(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Nueva Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
+                <input type="password" placeholder="••••••••" required 
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-ccvGreen text-gray-700 font-medium"
+                  value={newPass} onChange={(e) => setNewPass(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Confirmar Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
+                <input type="password" placeholder="••••••••" required 
+                  className="w-full bg-gray-50/50 border border-gray-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-ccvGreen text-gray-700 font-medium"
+                  value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={loading}
+              className="w-full bg-ccvGreen text-white font-bold rounded-xl py-3.5 hover:bg-green-800 shadow-lg text-lg mt-2"
+            >
+              {loading ? "Actualizando..." : "Actualizar Contraseña"}
+            </button>
+          </form>
+          
+          <button onClick={() => setView('login')} className="w-full mt-6 text-sm text-gray-400 hover:text-gray-600 font-bold">
+            Cancelar y volver
+          </button>
         </div>
       </div>
     )
@@ -124,7 +220,7 @@ export function App() {
 
       <div className="p-6 max-w-lg mx-auto">
         
-        {/* === VISTA 1: FINANZAS === */}
+        {/* === SUB-VISTA: FINANZAS === */}
         {view === 'finanzas' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
@@ -172,7 +268,7 @@ export function App() {
           </div>
         )}
 
-        {/* === VISTA 2: PERFIL (CARNET DIGITAL) === */}
+        {/* === SUB-VISTA: PERFIL (CARNET DIGITAL) === */}
         {view === 'perfil' && (
           <div className="animate-in fade-in zoom-in-95 duration-500">
             <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden text-center pb-10">
@@ -204,7 +300,7 @@ export function App() {
           </div>
         )}
 
-        {/* === VISTA 3: RESERVAS === */}
+        {/* === SUB-VISTA: RESERVAS === */}
         {view === 'reservas' && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-6">
             <div>
