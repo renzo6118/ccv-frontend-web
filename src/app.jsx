@@ -1,35 +1,42 @@
 import { useState } from 'react'
-import { User, CreditCard, Calendar, LogOut, Lock, IdCard, AlertTriangle, QrCode, MapPin, Clock } from 'lucide-react'
+import { User, CreditCard, Calendar, LogOut, Lock, IdCard, AlertTriangle, QrCode, MapPin, Clock, List } from 'lucide-react'
 
-// --- TU URL CORRECTA DE RENDER ---
 const API_URL = "https://ccv-api.onrender.com" 
 
 export function App() {
-  // 1. TODAS LAS VARIABLES DE ESTADO (Siempre arriba)
+  // 1. TODAS LAS VARIABLES DE ESTADO
   const [view, setView] = useState('login')
   const [user, setUser] = useState(null)
   const [finanzas, setFinanzas] = useState(null)
+  const [misReservas, setMisReservas] = useState([]) // <--- Nueva memoria para el historial
   
-  // Estados de Login
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Estados de Recuperar Contraseña
   const [resetUser, setResetUser] = useState('')
   const [newPass, setNewPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
 
-  // Estados de Reservas y Calendario
   const [reservaSede, setReservaSede] = useState('1') 
   const [reservaHora, setReservaHora] = useState('10:00 AM')
-  const [calendarDate, setCalendarDate] = useState(new Date(2026, 1, 1)) // Inicia en Feb 2026
+  const [calendarDate, setCalendarDate] = useState(new Date(2026, 1, 1)) 
   const [reservaFecha, setReservaFecha] = useState('2026-02-28')
 
-  // 2. FUNCIONES AYUDANTES Y LLAMADAS A LA API
+  // 2. FUNCIONES
   const formatFecha = (year, month, day) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
+  const cargarMisReservas = async (id_socio) => {
+    try {
+      const response = await fetch(`${API_URL}/reservas/misReservas/${id_socio}`)
+      const data = await response.json()
+      if (response.ok) setMisReservas(data.reservas)
+    } catch (err) {
+      console.log("Error al cargar historial")
+    }
   }
 
   const handleLogin = async (e) => {
@@ -46,6 +53,7 @@ export function App() {
       if (response.ok) {
         setUser(data.datosSocio)
         cargarFinanzas(data.datosSocio.id_socio)
+        cargarMisReservas(data.datosSocio.id_socio) // Cargamos el historial al entrar
         setView('finanzas')
       } else {
         setError(data.detail || "Credenciales incorrectas")
@@ -88,9 +96,7 @@ export function App() {
     setLoading(false)
   }
 
-  // 3. VISTAS (INTERFAZ GRÁFICA)
-
-  // --- VISTA 1: LOGIN ---
+  // 3. VISTAS
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center">
@@ -148,7 +154,6 @@ export function App() {
     )
   }
 
-  // --- VISTA 2: RECUPERAR CONTRASEÑA ---
   if (view === 'recuperar') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -205,14 +210,12 @@ export function App() {
     )
   }
 
-  // --- VISTA 3: DASHBOARD PRINCIPAL ---
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans">
       
-      {/* HEADER DINÁMICO */}
       <div className="bg-white px-6 py-5 shadow-sm flex items-center justify-between sticky top-0 z-20">
         <h2 className="text-xl font-bold text-gray-800 capitalize">
-          {view === 'perfil' ? 'Carnet Digital' : view === 'reservas' ? 'Agendar Reserva' : 'Finanzas'}
+          {view === 'perfil' ? 'Carnet Digital' : view === 'reservas' ? 'Agendar Reserva' : view === 'mis_reservas' ? 'Historial' : 'Finanzas'}
         </h2>
         <div className="w-10 h-10 bg-ccvGreen text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md">
           {user?.nombres.charAt(0)}
@@ -221,7 +224,6 @@ export function App() {
 
       <div className="p-6 max-w-lg mx-auto">
         
-        {/* === SUB-VISTA: FINANZAS === */}
         {view === 'finanzas' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
@@ -269,7 +271,6 @@ export function App() {
           </div>
         )}
 
-        {/* === SUB-VISTA: PERFIL === */}
         {view === 'perfil' && (
           <div className="animate-in fade-in zoom-in-95 duration-500">
             <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden text-center pb-10">
@@ -301,7 +302,41 @@ export function App() {
           </div>
         )}
 
-        {/* === SUB-VISTA: RESERVAS DINÁMICAS === */}
+        {/* --- NUEVA VISTA: MIS RESERVAS (HISTORIAL) --- */}
+        {view === 'mis_reservas' && (
+          <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+            <h3 className="text-gray-800 font-bold text-xl mb-4 px-1">Próximos Turnos</h3>
+            <div className="space-y-4">
+              {misReservas.length === 0 ? (
+                <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
+                  <List className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                  <p className="text-gray-400 font-medium">Aún no tienes reservas programadas.</p>
+                  <button onClick={() => setView('reservas')} className="mt-4 text-ccvGreen font-bold hover:underline">Agendar mi primera reserva</button>
+                </div>
+              ) : (
+                misReservas.map((res, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center border-l-4 border-l-ccvGreen transition-transform hover:scale-[1.02]">
+                    <div>
+                      <p className="font-extrabold text-gray-800 text-lg">
+                        {res.sede.replace('Sede ID: 1', 'Sede Villa').replace('Sede ID: 2', 'Sede Chosica').replace('Sede ID: 3', 'Sede Sur')}
+                      </p>
+                      <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-ccvGreen" /> {res.fecha}
+                      </p>
+                      <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-ccvGreen" /> {res.horario}
+                      </p>
+                    </div>
+                    <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1.5 rounded-lg uppercase tracking-wide">
+                      {res.estado}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {view === 'reservas' && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-6">
             <div>
@@ -317,7 +352,6 @@ export function App() {
               </select>
             </div>
 
-            {/* Calendario Dinámico */}
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-5">
                 <span className="font-bold text-gray-800 text-lg capitalize">
@@ -400,7 +434,8 @@ export function App() {
                   const data = await response.json()
                   if (response.ok) {
                     alert(`${data.mensaje}\nCódigo de tu reserva: ${data.codigoReserva}`)
-                    setView('perfil') 
+                    cargarMisReservas(user.id_socio) // Actualiza la lista
+                    setView('mis_reservas') // Lo manda directo a ver su historial
                   } else {
                     alert(`Error: ${data.detail}`)
                   }
@@ -418,29 +453,28 @@ export function App() {
 
       </div>
 
-      {/* BOTTOM NAVIGATION BAR */}
-      <div className="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-3 px-2 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button onClick={() => setView('perfil')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${view === 'perfil' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
-          <div className={`${view === 'perfil' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}>
-             <User className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-bold">Perfil</span>
+      {/* 5 BOTONES EN LA BARRA INFERIOR */}
+      <div className="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-3 px-1 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onClick={() => setView('perfil')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'perfil' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
+          <div className={`${view === 'perfil' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><User className="w-5 h-5" /></div>
+          <span className="text-[9px] font-bold">Perfil</span>
         </button>
-        <button onClick={() => setView('finanzas')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${view === 'finanzas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
-          <div className={`${view === 'finanzas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}>
-             <CreditCard className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-bold">Finanzas</span>
+        <button onClick={() => setView('finanzas')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'finanzas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
+          <div className={`${view === 'finanzas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><CreditCard className="w-5 h-5" /></div>
+          <span className="text-[9px] font-bold">Finanzas</span>
         </button>
-        <button onClick={() => setView('reservas')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${view === 'reservas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
-          <div className={`${view === 'reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}>
-             <Calendar className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-bold">Reservas</span>
+        <button onClick={() => setView('reservas')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'reservas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
+          <div className={`${view === 'reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><Calendar className="w-5 h-5" /></div>
+          <span className="text-[9px] font-bold">Agendar</span>
         </button>
-        <button onClick={() => {setUser(null); setView('login')}} className="flex flex-col items-center gap-1.5 w-16 text-gray-400 hover:text-red-500 transition-colors">
-          <div className="p-1.5"><LogOut className="w-6 h-6" /></div>
-          <span className="text-[10px] font-bold">Salir</span>
+        {/* NUEVO BOTÓN */}
+        <button onClick={() => setView('mis_reservas')} className={`flex flex-col items-center gap-1 w-14 transition-colors ${view === 'mis_reservas' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
+          <div className={`${view === 'mis_reservas' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}><List className="w-5 h-5" /></div>
+          <span className="text-[9px] font-bold">Historial</span>
+        </button>
+        <button onClick={() => {setUser(null); setView('login')}} className="flex flex-col items-center gap-1 w-14 text-gray-400 hover:text-red-500 transition-colors">
+          <div className="p-1.5"><LogOut className="w-5 h-5" /></div>
+          <span className="text-[9px] font-bold">Salir</span>
         </button>
       </div>
     </div>
