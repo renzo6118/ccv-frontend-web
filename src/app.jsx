@@ -5,29 +5,44 @@ import { User, CreditCard, Calendar, LogOut, Lock, IdCard, AlertTriangle, QrCode
 const API_URL = "https://ccv-api.onrender.com" 
 
 export function App() {
+  // 1. TODAS LAS VARIABLES DE ESTADO (Siempre arriba)
   const [view, setView] = useState('login')
   const [user, setUser] = useState(null)
   const [finanzas, setFinanzas] = useState(null)
   
+  // Estados de Login
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Estados de Recuperar Contraseña
+  const [resetUser, setResetUser] = useState('')
+  const [newPass, setNewPass] = useState('')
+  const [confirmPass, setConfirmPass] = useState('')
+
+  // Estados de Reservas y Calendario
+  const [reservaSede, setReservaSede] = useState('1') 
+  const [reservaHora, setReservaHora] = useState('10:00 AM')
+  const [calendarDate, setCalendarDate] = useState(new Date(2026, 1, 1)) // Inicia en Feb 2026
+  const [reservaFecha, setReservaFecha] = useState('2026-02-28')
+
+  // 2. FUNCIONES AYUDANTES Y LLAMADAS A LA API
+  const formatFecha = (year, month, day) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    
     try {
       const response = await fetch(`${API_URL}/autenticacion/autenticarSocio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario: username, password: password })
       })
-      
       const data = await response.json()
-      
       if (response.ok) {
         setUser(data.datosSocio)
         cargarFinanzas(data.datosSocio.id_socio)
@@ -50,6 +65,30 @@ export function App() {
       console.log("Error al cargar finanzas")
     }
   }
+
+  const handleReset = async (e) => {
+    e.preventDefault()
+    if (newPass !== confirmPass) return alert("¡Las contraseñas no coinciden!")
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_URL}/autenticacion/actualizarPassword`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: resetUser, nuevaPassword: newPass })
+      })
+      if (response.ok) {
+        alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.')
+        setView('login')
+      } else {
+        alert('Error: No se encontró al socio.')
+      }
+    } catch (err) {
+      alert('Error de conexión con el servidor')
+    }
+    setLoading(false)
+  }
+
+  // 3. VISTAS (INTERFAZ GRÁFICA)
 
   // --- VISTA 1: LOGIN ---
   if (view === 'login') {
@@ -91,20 +130,13 @@ export function App() {
 
             {error && <p className="text-red-500 text-sm text-center font-bold bg-red-50 py-2 rounded-lg">{error}</p>}
 
-            <button 
-              type="submit" disabled={loading}
-              className="w-full bg-ccvGreen text-white font-bold rounded-xl py-3.5 hover:bg-green-800 transition-colors shadow-lg shadow-green-900/20 text-lg"
-            >
+            <button type="submit" disabled={loading} className="w-full bg-ccvGreen text-white font-bold rounded-xl py-3.5 hover:bg-green-800 transition-colors shadow-lg shadow-green-900/20 text-lg">
               {loading ? "Verificando..." : "Ingresar"}
             </button>
           </form>
           
-          {/* NUEVO PIE DE LOGIN (Sin botón de registro y con nota administrativa) */}
           <div className="mt-8 text-center">
-            <p 
-              onClick={() => setView('recuperar')} 
-              className="text-sm text-ccvGreen font-bold cursor-pointer hover:underline"
-            >
+            <p onClick={() => setView('recuperar')} className="text-sm text-ccvGreen font-bold cursor-pointer hover:underline">
               ¿Olvidaste tu contraseña?
             </p>
             <p className="text-xs text-gray-400 mt-4 px-4 leading-relaxed font-medium">
@@ -116,41 +148,8 @@ export function App() {
     )
   }
 
-// Nuevos estados para la recuperación (Ponlos arriba con los otros useState)
-  const [resetUser, setResetUser] = useState('')
-  const [newPass, setNewPass] = useState('')
-  const [confirmPass, setConfirmPass] = useState('')
-  // Nuevos estados para Reservas
-  const [reservaSede, setReservaSede] = useState('1') // 1: Villa, 2: Chosica, 3: Sur
-  const [reservaFecha, setReservaFecha] = useState('2026-02-28')
-  const [reservaHora, setReservaHora] = useState('10:00 AM')
-
-  // --- VISTA: RECUPERAR CONTRASEÑA (FUNCIONAL) ---
+  // --- VISTA 2: RECUPERAR CONTRASEÑA ---
   if (view === 'recuperar') {
-    const handleReset = async (e) => {
-      e.preventDefault()
-      if (newPass !== confirmPass) return alert("¡Las contraseñas no coinciden!")
-      
-      setLoading(true)
-      try {
-        const response = await fetch(`${API_URL}/autenticacion/actualizarPassword`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuario: resetUser, nuevaPassword: newPass })
-        })
-        
-        if (response.ok) {
-          alert('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.')
-          setView('login')
-        } else {
-          alert('Error: No se encontró al socio.')
-        }
-      } catch (err) {
-        alert('Error de conexión con el servidor')
-      }
-      setLoading(false)
-    }
-
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 border border-gray-100 animate-in fade-in zoom-in-95 duration-300">
@@ -193,9 +192,7 @@ export function App() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full bg-ccvGreen text-white font-bold rounded-xl py-3.5 hover:bg-green-800 shadow-lg text-lg mt-2"
-            >
+            <button type="submit" disabled={loading} className="w-full bg-ccvGreen text-white font-bold rounded-xl py-3.5 hover:bg-green-800 shadow-lg text-lg mt-2">
               {loading ? "Actualizando..." : "Actualizar Contraseña"}
             </button>
           </form>
@@ -208,7 +205,7 @@ export function App() {
     )
   }
 
-  // --- CONTENEDOR PRINCIPAL DE LA APP (DASHBOARD) ---
+  // --- VISTA 3: DASHBOARD PRINCIPAL ---
   return (
     <div className="min-h-screen bg-gray-50 pb-24 font-sans">
       
@@ -272,7 +269,7 @@ export function App() {
           </div>
         )}
 
-        {/* === SUB-VISTA: PERFIL (CARNET DIGITAL) === */}
+        {/* === SUB-VISTA: PERFIL === */}
         {view === 'perfil' && (
           <div className="animate-in fade-in zoom-in-95 duration-500">
             <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden text-center pb-10">
@@ -304,7 +301,7 @@ export function App() {
           </div>
         )}
 
-        {/* === SUB-VISTA: RESERVAS (FUNCIONAL) === */}
+        {/* === SUB-VISTA: RESERVAS DINÁMICAS === */}
         {view === 'reservas' && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-500 space-y-6">
             <div>
@@ -320,21 +317,52 @@ export function App() {
               </select>
             </div>
 
-            {/* Calendario Simulado (Mantenemos tu diseño de Figma) */}
+            {/* Calendario Dinámico */}
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex justify-between items-center mb-5">
-                <span className="font-bold text-gray-800 text-lg">Febrero 2026</span>
+                <span className="font-bold text-gray-800 text-lg capitalize">
+                  {calendarDate.toLocaleString('es-ES', { month: 'long' })} {calendarDate.getFullYear()}
+                </span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))} 
+                    className="text-gray-400 hover:text-gray-800 p-1 font-bold transition-colors"
+                  >
+                    &lt;
+                  </button>
+                  <button 
+                    onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))} 
+                    className="text-gray-400 hover:text-gray-800 p-1 font-bold transition-colors"
+                  >
+                    &gt;
+                  </button>
+                </div>
               </div>
+              
               <div className="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 font-bold mb-3">
-                <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                <div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sa</div>
               </div>
+              
               <div className="grid grid-cols-7 gap-y-3 text-center text-sm font-bold text-gray-700">
-                <div></div><div></div><div></div><div></div><div></div><div></div><div>1</div>
-                <div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div>
-                <div>9</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div>15</div>
-                <div>16</div><div>17</div><div>18</div><div>19</div><div>20</div><div>21</div>
-                <div>22</div><div>23</div><div>24</div><div>25</div><div>26</div><div>27</div>
-                <div className="bg-gray-900 text-white rounded-xl w-9 h-9 flex items-center justify-center mx-auto shadow-md">28</div>
+                {Array.from({ length: new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay() }).map((_, i) => (
+                  <div key={`blank-${i}`}></div>
+                ))}
+                
+                {Array.from({ length: new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                  const day = i + 1;
+                  const fechaStr = formatFecha(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+                  const isSelected = reservaFecha === fechaStr;
+                  
+                  return (
+                    <div 
+                      key={day}
+                      onClick={() => setReservaFecha(fechaStr)}
+                      className={`cursor-pointer w-9 h-9 flex items-center justify-center mx-auto rounded-xl transition-all ${isSelected ? 'bg-gray-900 text-white shadow-md' : 'hover:bg-gray-100 hover:text-ccvGreen'}`}
+                    >
+                      {day}
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
@@ -366,13 +394,13 @@ export function App() {
                       idInstalacion: parseInt(reservaSede),
                       fecha: reservaFecha,
                       horaInicio: reservaHora,
-                      horaFin: "N/A" // Dato de relleno para cumplir con tu DTO
+                      horaFin: "N/A"
                     })
                   })
                   const data = await response.json()
                   if (response.ok) {
                     alert(`${data.mensaje}\nCódigo de tu reserva: ${data.codigoReserva}`)
-                    setView('perfil') // Lo mandamos al perfil tras reservar
+                    setView('perfil') 
                   } else {
                     alert(`Error: ${data.detail}`)
                   }
@@ -390,7 +418,7 @@ export function App() {
 
       </div>
 
-      {/* BOTTOM NAVIGATION BARR (Común para todas las vistas) */}
+      {/* BOTTOM NAVIGATION BAR */}
       <div className="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center py-3 px-2 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button onClick={() => setView('perfil')} className={`flex flex-col items-center gap-1.5 w-16 transition-colors ${view === 'perfil' ? 'text-ccvGreen' : 'text-gray-400 hover:text-gray-600'}`}>
           <div className={`${view === 'perfil' ? 'bg-green-50 text-ccvGreen' : 'text-gray-400'} rounded-xl p-1.5 transition-colors`}>
