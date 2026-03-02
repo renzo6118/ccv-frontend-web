@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        ccvGreen: '#054d32', // El verde elegante de tu diseño
+        ccvGreen: '#054d32', 
       }
     },
   },

@@ -23,9 +23,9 @@ export function App() {
   const [calendarDate, setCalendarDate] = useState(new Date(2026, 1, 1)) 
   const [reservaFecha, setReservaFecha] = useState('2026-02-28')
 
-  // --- NUEVOS ESTADOS PARA LA PASARELA ---
+  
   const [showPagoModal, setShowPagoModal] = useState(false)
-  const [tarjeta, setTarjeta] = useState('4242 4242 4242 4242') // Tarjeta de prueba por defecto
+  const [tarjeta, setTarjeta] = useState('4242 4242 4242 4242') 
   const [procesandoPago, setProcesandoPago] = useState(false)
 
   const formatFecha = (year, month, day) => {
@@ -99,14 +99,14 @@ export function App() {
     setLoading(false)
   }
 
-  // --- FUNCIÓN DE LA PASARELA SIMULADA ---
+
   const handlePagarDeuda = async (e) => {
     e.preventDefault()
     if (tarjeta.length < 15) return alert("Ingresa un número de tarjeta válido.")
     
     setProcesandoPago(true)
     
-    // Simulamos que el banco está procesando por 1.5 segundos
+
     setTimeout(async () => {
       try {
         const response = await fetch(`${API_URL}/finanzas/registrarPago`, {
@@ -122,7 +122,7 @@ export function App() {
         if (response.ok) {
           alert(`✅ ${data.mensaje}\nTransacción: ${data.codigoTransaccion}\nTarjeta: ${data.tarjetaUsada}`)
           setShowPagoModal(false)
-          cargarFinanzas(user.id_socio) // Esto actualizará la pantalla a S/ 0.00
+          cargarFinanzas(user.id_socio) 
         } else {
           alert(`Error: ${data.detail}`)
         }
